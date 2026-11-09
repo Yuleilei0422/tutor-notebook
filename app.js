@@ -27,6 +27,13 @@
     return C.validate({version:1,students,lessons});
   }
   let data=C.empty(), blocked=false, selected=null, editStudent=null, editLesson=null, lessonOwner=null, sheet=null, toastTimer;
+  let cloud=null, session=null, revision=0, saveBusy=false;
+  const sessionKey=key+".cloud-session";
+  const config=globalThis.TutorCloudConfig;
+  if(!demo&&config){
+    try{cloud=globalThis.TutorCloud.create(config);$("cloud-open").hidden=false;}
+    catch{notify("雲端設定無法使用，仍可使用本機紀錄。");}
+  }
   function notify(message) {
     clearTimeout(toastTimer);
     const toast=$("toast");
@@ -47,17 +54,39 @@
   try {data=read();}
   catch {lock("無法讀取本機紀錄。原資料已保留，請先確認瀏覽器設定。");}
   if(demo){$("demo-banner").hidden=false;$("local-label").textContent="示範模式";}
-  function commit(next) {
-    if(blocked)throw new Error("本機紀錄無法讀取，暫停儲存以保護原資料。");
+  function saveSession(s) {
+    try{
+      if(s)sessionStorage.setItem(sessionKey,JSON.stringify({url:config.url,session:s}));
+      else sessionStorage.removeItem(sessionKey);
+    }catch{/* The current tab can continue using its in-memory session. */}
+  }
+  function setCloudView(s,remote) {
+    session=s;revision=remote.revision;data=remote.payload;selected=null;
+    $("search").value="";$("filter").value="all";
+    $("local-label").textContent="雲端紀錄";
+    $("cloud-open").textContent="已登入";
+    $("storage-note").textContent="目前顯示雲端紀錄。";
+    saveSession(s);render();
+  }
+  async function commit(next) {
+    if(saveBusy)throw new Error("正在儲存或同步，請稍候。");
+    if(blocked&&!session)throw new Error("本機紀錄無法讀取，暫停儲存以保護原資料。");
     const checked=C.validate(next);
-    try {if(!demo)localStorage.setItem(key,JSON.stringify(checked));}
-    catch {throw new Error("無法儲存，請檢查瀏覽器儲存權限或可用空間。");}
-    data=checked;
+    saveBusy=true;
+    try{
+      if(session)revision=await cloud.write(session,revision,checked,saveSession);
+      else if(!demo){
+        try{localStorage.setItem(key,JSON.stringify(checked));}
+        catch{throw new Error("無法儲存，請檢查瀏覽器儲存權限或可用空間。");}
+      }
+      data=checked;
+    }finally{saveBusy=false;}
   }
   function person() {return data.students.find(s=>s.id===selected);}
   function setField(form,name,value) {form.elements.namedItem(name).value=value??"";}
   function showStudent(s) {
-    if(blocked){notify("目前無法儲存學生資料。");return;}
+    if(saveBusy){notify("正在同步，請稍候。");return;}
+    if(blocked&&!session){notify("目前無法儲存學生資料。");return;}
     editStudent=s?.id??null;
     const form=$("student-form");form.reset();
     form.elements.name.setCustomValidity("");
@@ -67,7 +96,8 @@
     $("student-dialog").showModal();form.elements.name.focus();
   }
   function showLesson(r) {
-    const s=person();if(!s||blocked)return;
+    const s=person();if(!s||(blocked&&!session))return;
+    if(saveBusy){notify("正在同步，請稍候。");return;}
     lessonOwner=s.id;editLesson=r?.id??null;
     const form=$("lesson-form");form.reset();
     form.elements.homework.required=false;
@@ -146,14 +176,14 @@
     $("copy-fallback").hidden=true;
     $("sheet-dialog").showModal();
   }
-  $("student-form").addEventListener("submit",e=>{
+  $("student-form").addEventListener("submit",async e=>{
     e.preventDefault();
     const f=new FormData(e.currentTarget);
     const name=String(f.get("name")).trim();
     if(!name){e.currentTarget.elements.name.setCustomValidity("請填寫姓名或暱稱");e.currentTarget.reportValidity();return;}
     const record={id:editStudent??id(),name,course:String(f.get("course")),archived:f.has("archived")};
     try {
-      commit({...data,students:editStudent?data.students.map(s=>s.id===editStudent?record:s):[...data.students,record]});
+      await commit({...data,students:editStudent?data.students.map(s=>s.id===editStudent?record:s):[...data.students,record]});
       selected=record.id;$("search").value="";$("filter").value="all";
       if(record.archived)$("show-archived").checked=true;
       $("student-dialog").close();render();notify("學生已儲存");
@@ -164,14 +194,14 @@
   $("lesson-form").elements.status.addEventListener("change",e=>{
     e.currentTarget.form.elements.homework.required=["prepared","sent"].includes(e.target.value);
   });
-  $("lesson-form").addEventListener("submit",e=>{
+  $("lesson-form").addEventListener("submit",async e=>{
     e.preventDefault();
     const form=e.currentTarget,f=Object.fromEntries(new FormData(form));
     if(!f.progress.trim()){form.elements.progress.setCustomValidity("請填寫這堂課的進度");form.reportValidity();return;}
     if(["prepared","sent"].includes(f.status)&&!f.homework.trim()){notify("請填寫作業內容，或先儲存為待出題。");return;}
     const record={...f,id:editLesson??id(),studentId:lessonOwner};
     try {
-      commit({...data,lessons:editLesson?data.lessons.map(r=>r.id===editLesson?record:r):[record,...data.lessons]});
+      await commit({...data,lessons:editLesson?data.lessons.map(r=>r.id===editLesson?record:r):[record,...data.lessons]});
       $("filter").value="all";$("lesson-dialog").close();render();notify("課堂紀錄已儲存");
     } catch(err){notify(err.message);}
   });
@@ -179,7 +209,11 @@
   $("search").addEventListener("input",render);$("filter").addEventListener("change",render);$("show-archived").addEventListener("change",render);
   for(const x of ["new-student","start"])$(x).addEventListener("click",()=>showStudent());
   $("edit-student").addEventListener("click",()=>showStudent(person()));$("new-lesson").addEventListener("click",()=>showLesson());
-  $("backup-open").addEventListener("click",()=>$("backup-dialog").showModal());
+  $("backup-open").addEventListener("click",()=>{
+    $("backup-note").textContent=session?"匯入會將備份裡的新紀錄加入此老師帳號的雲端；同一筆保留目前版本。":"匯入會合併新增紀錄；同一筆保留目前版本。";
+    $("import-backup").textContent=session?"匯入至雲端":"匯入備份";
+    $("backup-dialog").showModal();
+  });
   $("copy-sheet").addEventListener("click",async()=>{
     if(!sheet)return;
     try {await navigator.clipboard.writeText(sheet.text);notify("已複製，可貼到訊息中");}
@@ -193,28 +227,83 @@
   $("print-sheet").addEventListener("click",()=>{if(sheet){document.title="本週作業｜"+sheet.title;window.print();}});
   $("sheet-dialog").addEventListener("close",()=>{sheet=null;$("print-root").replaceChildren();});
   $("export-backup").addEventListener("click",()=>{
-    if(blocked){notify("目前無法讀取本機紀錄。");return;}
+    if(blocked&&!session){notify("目前無法讀取本機紀錄。");return;}
     const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)+"\n"],{type:"application/json"}));
     const a=el("a");a.href=url;a.download=`家教簿備份_${today()}.json`;
     document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),5000);
   });
   $("import-backup").addEventListener("click",()=>$("backup-file").click());
   $("backup-file").addEventListener("change",async e=>{
-    const input=e.currentTarget,file=input.files[0];input.value="";
+    const input=e.currentTarget,file=input.files[0],destination=session;input.value="";
     if(!file)return;
     try{
       if(file.size>8*1024*1024)throw new Error("備份檔太大。");
+      const imported=JSON.parse(await file.text());
+      if(!$("backup-dialog").open||session!==destination)throw new Error("儲存位置已切換，請重新選擇備份檔。");
       const old=[data.students.length,data.lessons.length];
-      const next=C.merge(data,JSON.parse(await file.text()));
-      commit(next);$("backup-dialog").close();render();
+      const next=C.merge(data,imported);
+      await commit(next);$("backup-dialog").close();render();
       notify(`已匯入 ${data.students.length-old[0]} 位學生、${data.lessons.length-old[1]} 堂課`);
     }catch(err){notify(err instanceof SyntaxError?"不是有效的 JSON 備份，原紀錄未變。":err.message);}
   });
   window.addEventListener("storage",e=>{
-    if(demo||blocked||!(e.key===key||e.key===null))return;
+    if(demo||session||blocked||!(e.key===key||e.key===null))return;
     if(document.querySelector("dialog[open]")){lock("另一個分頁已更動紀錄，請重新整理後再編輯。");return;}
     try {data=read();render();}
     catch {lock("另一個分頁的資料無法讀取，原紀錄已保留。");}
   });
+  $("cloud-open").addEventListener("click",()=>{
+    if(saveBusy){notify("正在同步，請稍候。");return;}
+    $("cloud-form").hidden=!!session;$("cloud-actions").hidden=!session;
+    $("cloud-dialog").showModal();
+  });
+  $("cloud-form").addEventListener("submit",async e=>{
+    e.preventDefault();
+    if(!cloud||saveBusy)return;
+    const form=e.currentTarget,f=new FormData(form),button=form.querySelector('button[type=submit]');
+    form.elements.password.value="";saveBusy=true;button.disabled=true;
+    try{
+      const s=await cloud.login(String(f.get("email")),String(f.get("password")));
+      const remote=await cloud.read(s);
+      if(!$("cloud-dialog").open)return;
+      setCloudView(s,remote);$("cloud-dialog").close();notify("已登入，正在使用雲端紀錄");
+    }catch(err){notify(err.message);}
+    finally{button.disabled=false;saveBusy=false;}
+  });
+  async function refreshCloud(report=false){
+    if(!session||saveBusy)return;
+    saveBusy=true;
+    try{
+      const remote=await cloud.read(session,saveSession);
+      data=remote.payload;revision=remote.revision;render();
+      if(report){$("cloud-dialog").close();notify("已讀取最新紀錄");}
+    }catch(err){if(report||err.code==="auth")notify(err.message);}
+    finally{saveBusy=false;}
+  }
+  $("cloud-refresh").addEventListener("click",()=>refreshCloud(true));
+  $("cloud-logout").addEventListener("click",()=>{
+    if(saveBusy){notify("正在同步，請稍候。");return;}
+    $("cloud-dialog").close();session=null;revision=0;saveSession(null);
+    selected=null;data=C.empty();$("search").value="";$("filter").value="all";$("show-archived").checked=false;
+    $("local-label").textContent="此瀏覽器儲存";$("cloud-open").textContent="同步";
+    $("storage-note").textContent="紀錄只在此瀏覽器。換裝置前請先匯出備份。";
+    try{data=read();}catch{lock("無法讀取本機紀錄，原資料已保留。");}
+    render();notify("已回到本機紀錄");
+  });
+  document.addEventListener("visibilitychange",()=>{
+    if(!document.hidden&&!document.querySelector("dialog[open]"))refreshCloud();
+  });
+  async function restoreCloud() {
+    if(!cloud)return;
+    saveBusy=true;
+    try{
+      const stored=JSON.parse(sessionStorage.getItem(sessionKey)||"null");
+      if(stored?.url!==config.url||!stored.session)return;
+      const remote=await cloud.read(stored.session);
+      setCloudView(stored.session,remote);
+    }catch{saveSession(null);notify("未能恢復雲端登入，目前顯示本機紀錄。");}
+    finally{saveBusy=false;}
+  }
   render();
+  void restoreCloud();
 })();

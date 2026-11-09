@@ -138,6 +138,7 @@ form label.inline{display:flex;align-items:center}
   .footer{flex-wrap:wrap}
 }
 @media(max-width:380px){.local{display:none}.student-head .actions{flex-wrap:wrap}.form-grid{grid-template-columns:1fr;gap:0}.summary strong{font-size:14px}.sheet-card{padding:15px}}
+@media(max-width:540px){.top-actions:has(#cloud-open:not([hidden])) .local{display:none}}
 @page{size:A4;margin:17mm}
 @media print{
   body,:root{background:#fff;color:#111;font-size:11pt}
