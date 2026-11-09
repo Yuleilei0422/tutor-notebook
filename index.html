@@ -10,11 +10,11 @@
   <title>家教簿｜家教進度紀錄</title>
   <link rel="icon" href="./notebook-icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="./apple-touch-icon.png" sizes="180x180">
-  <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="./style.css?v=lesson-form-2">
   <script src="./core.js" defer></script>
   <script src="./cloud-config.js" defer></script>
   <script src="./cloud.js" defer></script>
-  <script src="./app.js" defer></script>
+  <script src="./app.js?v=lesson-form-2" defer></script>
 </head>
 <body>
 <div id="app">
@@ -68,13 +68,16 @@
 </dialog>
 <dialog id="lesson-dialog" class="wide" aria-labelledby="lesson-dialog-title">
   <form id="lesson-form">
-    <div class="modal-head"><div><h2 id="lesson-dialog-title">記一堂課</h2><p id="lesson-context"></p></div><button type="button" class="icon-button" data-close aria-label="關閉">×</button></div>
+    <div class="modal-head"><div><h2 id="lesson-dialog-title" tabindex="-1" autofocus>記一堂課</h2><p id="lesson-context"></p></div><button type="button" class="icon-button" data-close aria-label="關閉">×</button></div>
     <div class="form-grid"><label>上課日期<input type="date" name="date" required></label><label>作業狀態<select name="status"><option value="pending">待出題</option><option value="prepared">已出好</option><option value="sent">已回傳</option><option value="exempt">免出作業</option></select></label></div>
     <label>上課進度<input name="progress" maxlength="400" required placeholder="例如：2-1 直線斜率與方程式"></label>
-    <div class="form-grid"><label>題型<input name="type" maxlength="140" placeholder="計算、觀念、應用、混合"></label><label>完成期限<input type="date" name="due"></label></div>
-    <label>本次作業<textarea name="homework" maxlength="2800" rows="3" placeholder="題目範圍、題號，或要完成的事項"></textarea></label>
-    <label>給家長的提醒<textarea name="parentNote" maxlength="1000" rows="2" placeholder="例如：請寫出計算過程"></textarea></label>
-    <label>私人備註 <span class="subtle">不顯示在家長版</span><textarea name="privateNote" maxlength="1800" rows="2" placeholder="下次要複習的觀念"></textarea></label>
+    <details class="lesson-options" id="lesson-options">
+      <summary>作業內容與備註</summary>
+      <label>本次作業<textarea name="homework" maxlength="2800" rows="3" placeholder="題目範圍、題號，或要完成的事項"></textarea></label>
+      <div class="form-grid"><label>題型<input name="type" maxlength="140" placeholder="計算、觀念、應用、混合"></label><label>完成期限<input type="date" name="due"></label></div>
+      <label>給家長的提醒<textarea name="parentNote" maxlength="1000" rows="2" placeholder="例如：請寫出計算過程"></textarea></label>
+      <label>私人備註 <span class="subtle">不顯示在家長版</span><textarea name="privateNote" maxlength="1800" rows="2" placeholder="下次要複習的觀念"></textarea></label>
+    </details>
     <div class="modal-actions"><button class="button quiet" type="button" data-close>取消</button><button class="button primary" type="submit">儲存紀錄</button></div>
   </form>
 </dialog>

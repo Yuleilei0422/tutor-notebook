@@ -93,6 +93,9 @@ form input:not([type=checkbox]),form textarea,form select,#copy-fallback textare
 form textarea,#copy-fallback textarea{resize:vertical}
 form label.inline{display:flex;align-items:center}
 .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.lesson-options{border-top:1px solid var(--line)}
+.lesson-options summary{min-height:44px;padding:11px 0;cursor:pointer;color:var(--green);font-weight:600}
+.lesson-options[open] summary{margin-bottom:6px}
 .modal-actions{justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
 .backup-actions{margin:13px 0}
 .sheet-card{border:1px solid var(--line);border-radius:10px;padding:22px;background:#fcfcf8;overflow-wrap:anywhere}
@@ -130,6 +133,8 @@ form label.inline{display:flex;align-items:center}
   .top-actions:has(#cloud-open:not([hidden])) .local{display:none}
   .form-grid{grid-template-columns:minmax(0,1fr);gap:0}
   dialog,dialog.wide{width:calc(100% - 24px);max-height:calc(100dvh - 24px);padding:16px}
+  #lesson-dialog input[type=date]{appearance:none;-webkit-appearance:none;display:block;text-align:left}
+  #lesson-dialog input[type=date]::-webkit-date-and-time-value{text-align:left;min-height:1.2em}
   .modal-actions .button{min-height:44px}
   #lesson-dialog .modal-actions{position:sticky;bottom:-16px;margin-inline:-16px;margin-bottom:-16px;padding:10px 16px 16px;background:var(--white);border-top:1px solid var(--line)}
 }

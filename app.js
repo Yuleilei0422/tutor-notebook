@@ -100,14 +100,14 @@
     if(saveBusy){notify("正在同步，請稍候。");return;}
     lessonOwner=s.id;editLesson=r?.id??null;
     const form=$("lesson-form");form.reset();
-    form.elements.homework.required=false;
+    $("lesson-options").open=false;
+    form.elements.homework.setCustomValidity("");
     form.elements.progress.setCustomValidity("");
     $("lesson-dialog-title").textContent=r?"編輯課堂紀錄":"記一堂課";
     $("lesson-context").textContent=s.name;
     setField(form,"date",r?.date??today());
     if(r)for(const field of ["progress","homework","type","due","status","parentNote","privateNote"])setField(form,field,r[field]);
-    form.elements.homework.required=["prepared","sent"].includes(form.elements.status.value);
-    $("lesson-dialog").showModal();form.elements.progress.focus();
+    $("lesson-dialog").showModal();
   }
   function studentTile(s) {
     const b=button("",`student-tile${s.id===selected?" selected":""}`,()=>{
@@ -188,14 +188,22 @@
   });
   $("student-form").elements.name.addEventListener("input",e=>e.target.setCustomValidity(""));
   $("lesson-form").elements.progress.addEventListener("input",e=>e.target.setCustomValidity(""));
+  $("lesson-form").elements.homework.addEventListener("input",e=>e.target.setCustomValidity(""));
+  $("lesson-form").elements.homework.addEventListener("invalid",()=>{$("lesson-options").open=true;});
   $("lesson-form").elements.status.addEventListener("change",e=>{
-    e.currentTarget.form.elements.homework.required=["prepared","sent"].includes(e.target.value);
+    const homework=e.target.form.elements.homework;
+    homework.setCustomValidity("");
+    if(["prepared","sent"].includes(e.target.value)&&!homework.value.trim())$("lesson-options").open=true;
   });
   $("lesson-form").addEventListener("submit",async e=>{
     e.preventDefault();
     const form=e.currentTarget,f=Object.fromEntries(new FormData(form));
     if(!f.progress.trim()){form.elements.progress.setCustomValidity("請填寫這堂課的進度");form.reportValidity();return;}
-    if(["prepared","sent"].includes(f.status)&&!f.homework.trim()){notify("請填寫作業內容，或先儲存為待出題。");return;}
+    if(["prepared","sent"].includes(f.status)&&!f.homework.trim()){
+      $("lesson-options").open=true;
+      form.elements.homework.setCustomValidity("請填寫作業內容，或先儲存為待出題。");
+      form.elements.homework.reportValidity();return;
+    }
     const record={...f,id:editLesson??id(),studentId:lessonOwner};
     try {
       await commit({...data,lessons:editLesson?data.lessons.map(r=>r.id===editLesson?record:r):[record,...data.lessons]});
