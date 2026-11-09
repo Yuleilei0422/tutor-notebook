@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="description" content="家教的學生、課堂進度與作業紀錄。">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>家教簿｜家教進度紀錄</title>
+  <link rel="stylesheet" href="./style.css">
+  <script src="./core.js" defer></script>
+  <script src="./app.js" defer></script>
+</head>
+<body>
+<div id="app">
+  <header class="top">
+    <div class="top-inner">
+      <div class="brand"><span class="mark" aria-hidden="true">簿</span><span>家教簿<small>進度與作業</small></span></div>
+      <div class="top-actions"><span class="local"><i></i><span id="local-label">此瀏覽器儲存</span></span><button class="button quiet" id="backup-open">備份與還原</button></div>
+    </div>
+  </header>
+  <div id="demo-banner" class="demo-banner" hidden>示範模式 · 這裡是虛構資料，修改不會寫入你的紀錄。 <a href="./">回到我的紀錄</a></div>
+  <div class="layout">
+    <aside class="sidebar" aria-label="學生">
+      <div class="side-head"><h2>學生</h2><button class="button small quiet" id="new-student">＋ 新增</button></div>
+      <label class="search"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="搜尋學生" aria-label="搜尋學生"></label>
+      <nav id="student-list" aria-label="學生名單"></nav>
+      <label id="archive-control" class="archive-control" hidden><input type="checkbox" id="show-archived"> 顯示已封存</label>
+    </aside>
+    <main id="main" class="main" aria-label="課堂工作區">
+      <section id="onboarding" class="onboarding">
+        <div class="empty-icon" aria-hidden="true"><span></span><span></span><span></span></div>
+        <h1>家教進度紀錄</h1>
+        <p>先新增一位學生，就能開始記課堂進度和作業。</p>
+        <div class="actions"><button class="button primary" id="start">＋ 新增學生</button><a class="button quiet" href="?demo=1">查看示例</a></div>
+      </section>
+      <section id="workspace" hidden>
+        <div class="student-head">
+          <div><p class="eyebrow">學生紀錄</p><h1 id="student-name"></h1><p id="course"></p></div>
+          <div class="actions"><button class="button quiet" id="edit-student">編輯學生</button><button class="button primary" id="new-lesson">＋ 記一堂課</button></div>
+        </div>
+        <div class="summary">
+          <div><span>最近上課</span><strong id="last-date">—</strong></div>
+          <div><span>待出作業</span><strong id="pending-count">0</strong></div>
+          <div><span>課堂紀錄</span><strong id="lesson-count">0</strong></div>
+        </div>
+        <section class="timeline">
+          <div class="timeline-head"><h2>課堂紀錄</h2><label class="filter"><span class="sr-only">篩選課堂</span><select id="filter"><option value="all">全部紀錄</option><option value="pending">待出作業</option><option value="prepared">已出好</option><option value="sent">已回傳</option><option value="exempt">免出作業</option></select></label></div>
+          <div id="lesson-list"></div>
+        </section>
+      </section>
+    </main>
+  </div>
+  <footer class="footer"><span>家教簿</span><span>紀錄只在此瀏覽器。換裝置前請先匯出備份。</span></footer>
+  <div id="toast" role="status" aria-live="polite" popover="manual" hidden></div>
+</div>
+<dialog id="student-dialog" aria-labelledby="student-dialog-title">
+  <form id="student-form">
+    <div class="modal-head"><h2 id="student-dialog-title">新增學生</h2><button class="icon-button" type="button" data-close aria-label="關閉">×</button></div>
+    <label>學生姓名<input name="name" required maxlength="70" placeholder="輸入姓名或暱稱"></label>
+    <label>課程<input name="course" maxlength="100" placeholder="例如：高一數學"></label>
+    <label class="inline" id="archived-field" hidden><input type="checkbox" name="archived"> 封存學生（保留所有紀錄）</label>
+    <div class="modal-actions"><button class="button quiet" type="button" data-close>取消</button><button class="button primary" type="submit">儲存學生</button></div>
+  </form>
+</dialog>
+<dialog id="lesson-dialog" class="wide" aria-labelledby="lesson-dialog-title">
+  <form id="lesson-form">
+    <div class="modal-head"><div><h2 id="lesson-dialog-title">記一堂課</h2><p id="lesson-context"></p></div><button type="button" class="icon-button" data-close aria-label="關閉">×</button></div>
+    <div class="form-grid"><label>上課日期<input type="date" name="date" required></label><label>作業狀態<select name="status"><option value="pending">待出題</option><option value="prepared">已出好</option><option value="sent">已回傳</option><option value="exempt">免出作業</option></select></label></div>
+    <label>這堂教到哪裡？<input name="progress" maxlength="400" required placeholder="例如：2-1 直線斜率與方程式"></label>
+    <div class="form-grid"><label>題型<input name="type" maxlength="140" placeholder="計算、觀念、應用、混合"></label><label>完成期限<input type="date" name="due"></label></div>
+    <label>本次作業<textarea name="homework" maxlength="2800" rows="3" placeholder="題目範圍、題號，或要完成的事項"></textarea></label>
+    <label>給家長的提醒<textarea name="parentNote" maxlength="1000" rows="2" placeholder="例如：請寫出計算過程"></textarea></label>
+    <label>私人備註 <span class="subtle">不顯示在作業單</span><textarea name="privateNote" maxlength="1800" rows="2" placeholder="下次要複習的觀念"></textarea></label>
+    <div class="modal-actions"><button class="button quiet" type="button" data-close>取消</button><button class="button primary" type="submit">儲存紀錄</button></div>
+  </form>
+</dialog>
+<dialog id="sheet-dialog" class="wide" aria-labelledby="sheet-dialog-title">
+  <div class="modal-head"><div><h2 id="sheet-dialog-title">家長作業單</h2><p>確認內容後再自行傳給家長。</p></div><button class="icon-button" type="button" data-close aria-label="關閉">×</button></div>
+  <div id="sheet-preview"></div>
+  <div class="modal-actions"><button class="button quiet" type="button" id="copy-sheet">複製家長訊息</button><button class="button primary" type="button" id="print-sheet">列印／存 PDF</button></div>
+  <label id="copy-fallback" hidden>可手動複製<textarea rows="6" readonly></textarea></label>
+</dialog>
+<dialog id="backup-dialog" aria-labelledby="backup-title">
+  <div class="modal-head"><h2 id="backup-title">備份與還原</h2><button class="icon-button" type="button" data-close aria-label="關閉">×</button></div>
+  <p>備份包含學生、課堂與私人備註，請自行妥善保存。</p>
+  <div class="backup-actions"><button class="button primary" id="export-backup">下載備份</button><button class="button quiet" id="import-backup">匯入備份</button><input type="file" id="backup-file" accept=".json,application/json" hidden></div>
+  <p class="subtle">匯入會合併新增紀錄；同一筆保留目前版本。</p>
+</dialog>
+<div id="print-root" aria-hidden="true"></div>
+<noscript>請啟用 JavaScript 以使用家教進度紀錄。</noscript>
+</body>
+</html>
