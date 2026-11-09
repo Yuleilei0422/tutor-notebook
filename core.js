@@ -41,7 +41,7 @@
   function parentSheet(s,r) {
     if(s.id!==r.studentId || !r.homework.trim() || r.status==="exempt") throw new Error("請先填寫這堂課的作業。");
     const fields={title:`${s.name}｜${r.progress}｜${r.date}`,name:s.name,course:s.course,date:r.date,progress:r.progress,homework:r.homework,due:r.due,note:r.parentNote};
-    const text=[`${fields.title}`,"【家教作業單】",fields.course&&`課程：${fields.course}`,`上課進度：${fields.progress}`,`本次作業：\n${fields.homework}`,fields.due&&`完成期限：${fields.due}`,fields.note&&`給家長的提醒：${fields.note}`].filter(Boolean).join("\n\n");
+    const text=["【本週作業】",fields.title,fields.course&&`課程：${fields.course}`,`上課進度：${fields.progress}`,`本次作業：\n${fields.homework}`,fields.due&&`完成期限：${fields.due}`,fields.note&&`給家長的提醒：${fields.note}`].filter(Boolean).join("\n\n");
     return {...fields,text};
   }
   function merge(current,incoming) {

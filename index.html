@@ -72,12 +72,12 @@
     <div class="form-grid"><label>題型<input name="type" maxlength="140" placeholder="計算、觀念、應用、混合"></label><label>完成期限<input type="date" name="due"></label></div>
     <label>本次作業<textarea name="homework" maxlength="2800" rows="3" placeholder="題目範圍、題號，或要完成的事項"></textarea></label>
     <label>給家長的提醒<textarea name="parentNote" maxlength="1000" rows="2" placeholder="例如：請寫出計算過程"></textarea></label>
-    <label>私人備註 <span class="subtle">不顯示在作業單</span><textarea name="privateNote" maxlength="1800" rows="2" placeholder="下次要複習的觀念"></textarea></label>
+    <label>私人備註 <span class="subtle">不顯示在家長版</span><textarea name="privateNote" maxlength="1800" rows="2" placeholder="下次要複習的觀念"></textarea></label>
     <div class="modal-actions"><button class="button quiet" type="button" data-close>取消</button><button class="button primary" type="submit">儲存紀錄</button></div>
   </form>
 </dialog>
 <dialog id="sheet-dialog" class="wide" aria-labelledby="sheet-dialog-title">
-  <div class="modal-head"><div><h2 id="sheet-dialog-title">家長作業單</h2><p>確認內容後再自行傳給家長。</p></div><button class="icon-button" type="button" data-close aria-label="關閉">×</button></div>
+  <div class="modal-head"><div><h2 id="sheet-dialog-title">本週作業</h2><p>確認內容後再自行傳給家長。</p></div><button class="icon-button" type="button" data-close aria-label="關閉">×</button></div>
   <div id="sheet-preview"></div>
   <div class="modal-actions"><button class="button quiet" type="button" id="copy-sheet">複製家長訊息</button><button class="button primary" type="button" id="print-sheet">列印／存 PDF</button></div>
   <label id="copy-fallback" hidden>可手動複製<textarea rows="6" readonly></textarea></label>

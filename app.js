@@ -126,12 +126,12 @@
     if(r.privateNote){const d=el("details","private");d.append(el("summary","","私人備註"),el("p","",r.privateNote));body.append(d);}
     const actions=el("div","record-actions");
     actions.append(button("編輯","button quiet small",()=>showLesson(r)));
-    if(r.homework&&r.status!=="exempt")actions.append(button("家長作業單","button small tinted",()=>preview(s,r)));
+    if(r.homework&&r.status!=="exempt")actions.append(button("本週作業","button small tinted",()=>preview(s,r)));
     body.append(actions);card.append(date,body);return card;
   }
   function sheetCard(fields) {
     const card=el("article","sheet-card");
-    card.append(el("p","sheet-label","家教作業單"),el("h1","",fields.title));
+    card.append(el("h1","","本週作業"),el("p","sheet-meta",fields.title));
     if(fields.course)card.append(el("p","sheet-course",fields.course));
     for(const [label,val] of [["上課進度",fields.progress],["本次作業",fields.homework],["完成期限",fields.due],["給家長的提醒",fields.note]]){
       if(!val)continue;
@@ -190,7 +190,7 @@
   });
   const initialTitle=document.title;
   window.addEventListener("afterprint",()=>{document.title=initialTitle;});
-  $("print-sheet").addEventListener("click",()=>{if(sheet){document.title=sheet.title;window.print();}});
+  $("print-sheet").addEventListener("click",()=>{if(sheet){document.title="本週作業｜"+sheet.title;window.print();}});
   $("sheet-dialog").addEventListener("close",()=>{sheet=null;$("print-root").replaceChildren();});
   $("export-backup").addEventListener("click",()=>{
     if(blocked){notify("目前無法讀取本機紀錄。");return;}

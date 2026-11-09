@@ -77,7 +77,7 @@ a{color:var(--green)}
 .lesson-date strong{font-size:17px;white-space:nowrap}
 .lesson-date small{color:var(--muted);font-size:11px}
 .lesson-title{display:flex;align-items:start;justify-content:space-between;gap:9px}
-.lesson-title h3{font-size:17px;overflow-wrap:anywhere}
+.lesson-title h3{min-width:0;font-size:17px;overflow-wrap:anywhere}
 .status{font-size:11px;border-radius:20px;padding:3px 9px;white-space:nowrap;background:#edf0ed;color:#47524b;font-weight:650}
 .status.pending{background:var(--sand);color:#6e4b10}.status.prepared{background:var(--sage);color:var(--green)}.status.sent{background:#e8f0f7;color:#234d6c}
 .homework,.sheet-field p,.private p{white-space:pre-wrap;overflow-wrap:anywhere}
@@ -105,7 +105,7 @@ form label.inline{display:flex;align-items:center}
 .backup-actions{margin:13px 0}
 .sheet-card{border:1px solid var(--line);border-radius:10px;padding:22px;background:#fcfcf8;overflow-wrap:anywhere}
 .sheet-card h1{font-size:24px;line-height:1.35;margin:4px 0}
-.sheet-label{color:var(--green);font-size:13px;font-weight:750}
+.sheet-meta{color:var(--green);font-size:14px;font-weight:650;margin:5px 0 3px}
 .sheet-course{color:var(--muted);font-size:14px}
 .sheet-field{margin-top:13px;border-top:1px solid var(--line);padding-top:9px}
 .sheet-field h2{font-size:13px;color:var(--green);margin-bottom:3px}
@@ -126,14 +126,18 @@ form label.inline{display:flex;align-items:center}
   .student-head{align-items:flex-start;flex-direction:column;margin-bottom:14px}
   .student-head h1{font-size:30px}
   .summary{margin-bottom:17px;padding:9px 0}
-  .summary>div{padding:3px 9px}
+  .summary>div{min-width:0;padding:3px 9px}
   .summary strong{font-size:16px}
-  .lesson-card{grid-template-columns:52px minmax(0,1fr);padding:12px;gap:11px}
-  .lesson-date strong,.lesson-title h3{font-size:15px}
+  .lesson-card{grid-template-columns:minmax(0,1fr);padding:14px;gap:8px}
+  .lesson-date{border-right:0;padding:0;flex-direction:row;align-items:baseline;gap:7px}
+  .lesson-date strong{font-size:13px}
+  .lesson-title h3{font-size:16px}
+  .form-grid>label{min-width:0}
+  form input:not([type=checkbox]),form textarea,form select,#copy-fallback textarea{min-width:0;font-size:16px}
   .record-actions{flex-wrap:wrap}
   .footer{flex-wrap:wrap}
 }
-@media(max-width:380px){.local{display:none}.lesson-title{flex-wrap:wrap}.student-head .actions{flex-wrap:wrap}.form-grid{grid-template-columns:1fr;gap:0}}
+@media(max-width:380px){.local{display:none}.student-head .actions{flex-wrap:wrap}.form-grid{grid-template-columns:1fr;gap:0}.summary strong{font-size:14px}.sheet-card{padding:15px}}
 @page{size:A4;margin:17mm}
 @media print{
   body,:root{background:#fff;color:#111;font-size:11pt}
@@ -141,7 +145,7 @@ form label.inline{display:flex;align-items:center}
   #print-root{display:block}
   .sheet-card{background:#fff;border:0;border-radius:0;padding:0;color:#111}
   .sheet-card h1{font-size:18pt}
-  .sheet-field h2,.sheet-label{color:#111}
+  .sheet-field h2,.sheet-meta{color:#111}
   .sheet-field h2{break-after:avoid}
   .sheet-field p{orphans:2;widows:2}
 }
