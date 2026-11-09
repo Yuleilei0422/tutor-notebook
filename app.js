@@ -114,8 +114,9 @@
       selected=s.id;$("filter").value="all";render();
     });
     b.setAttribute("aria-current",s.id===selected?"true":"false");
-    b.append(el("span","avatar",Array.from(s.name)[0]),el("span","student-info"));
-    b.lastChild.append(el("strong","",s.name),el("small","",s.archived?"已封存":s.course||"未設定課程"));
+    const info=el("span","student-info");
+    info.append(el("strong","",s.name),el("small","",s.archived?"已封存":s.course||"未設定課程"));
+    b.append(info);
     return b;
   }
   function render() {
@@ -137,11 +138,7 @@
     const filter=$("filter").value, matching=rows.filter(r=>filter==="all"||r.status===filter);
     $("lesson-list").replaceChildren(...matching.map(r=>lessonCard(s,r)));
     if(!matching.length){
-      const box=el("div","record-empty");
-      box.append(el("strong","",rows.length?"沒有符合的課堂紀錄":"還沒有課堂紀錄"));
-      box.append(el("p","",rows.length?"可以切回全部紀錄。":"記下今天教到哪裡，下次接續更方便。"));
-      if(!rows.length&&!s.archived)box.append(button("＋ 記一堂課","button quiet",()=>showLesson()));
-      $("lesson-list").append(box);
+      $("lesson-list").append(el("p","record-empty",rows.length?"沒有符合的課堂紀錄":"還沒有課堂紀錄"));
     }
   }
   function lessonCard(s,r) {
