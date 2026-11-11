@@ -6,7 +6,7 @@
     if(!/^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/.test(config.url)||
        !/^sb_publishable_[A-Za-z0-9_-]{12,100}$/.test(config.key))throw new Error("同步設定不正確。");
     const C=globalThis.TutorCore;
-    async function request(path,{body,token,login=false}={}){
+    async function request(path,{body,token,login=false,refresh=false}={}){
       const headers={apikey:config.key,Accept:"application/json"};
       if(token)headers.Authorization="Bearer "+token;
       if(body)headers["Content-Type"]="application/json";
@@ -17,6 +17,7 @@
       if(res.ok)return payload;
       if(payload?.code==="40001")throw fault("conflict","另一台裝置已更新。這次沒有覆寫；請先複製未儲存內容，再關閉表單並讀取最新紀錄。");
       if(login&&[400,401,403].includes(res.status))throw fault("login","登入失敗，請確認老師帳號與密碼。");
+      if(refresh&&[400,401,403].includes(res.status))throw fault("session-expired","登入已失效，請重新登入雲端。");
       if([401,403].includes(res.status))throw fault("auth","沒有雲端存取權限，請重新登入或檢查專案設定。");
       throw fault("remote","同步失敗，請稍後重試或檢查資料庫是否已設定。");
     }
@@ -29,7 +30,7 @@
     async function token(s,onRefresh){
       if(!s?.access||!s?.refresh)throw fault("auth","請先登入老師帳號。");
       if(s.expiresAt>Date.now()+30000)return s.access;
-      if(!refreshing)refreshing=request("/auth/v1/token?grant_type=refresh_token",{body:{refresh_token:s.refresh}})
+      if(!refreshing)refreshing=request("/auth/v1/token?grant_type=refresh_token",{body:{refresh_token:s.refresh},refresh:true})
         .then(decodeSession).finally(()=>{refreshing=null;});
       const renewed=await refreshing;
       if(renewed.userId!==s.userId)throw fault("auth","登入身份不符，請重新登入。");

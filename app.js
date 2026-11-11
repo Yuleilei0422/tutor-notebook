@@ -27,7 +27,7 @@
     return C.validate({version:1,students,lessons});
   }
   let data=C.empty(), blocked=false, selected=null, editStudent=null, editLesson=null, lessonOwner=null, sheet=null, toastTimer;
-  let cloud=null, session=null, revision=0, saveBusy=false;
+  let cloud=null, session=null, sessionStored=false, revision=0, saveBusy=false;
   const sessionKey=key+".cloud-session";
   const config=globalThis.TutorCloudConfig;
   if(!demo&&config){
@@ -54,19 +54,46 @@
   try {data=read();}
   catch {lock("無法讀取本機紀錄。原資料已保留，請先確認瀏覽器設定。");}
   if(demo){$("demo-banner").hidden=false;$("local-label").textContent="示範模式";}
-  function saveSession(s) {
+  function loadSession() {
+    let saved;
+    try{saved=localStorage.getItem(sessionKey);}catch{/* Try tab storage below. */}
     try{
-      if(s)sessionStorage.setItem(sessionKey,JSON.stringify({url:config.url,session:s}));
-      else sessionStorage.removeItem(sessionKey);
-    }catch{/* The current tab can continue using its in-memory session. */}
+      const stored=JSON.parse(saved??sessionStorage.getItem(sessionKey)??"null");
+      if(stored?.url!==config.url)return null;
+      const s=stored.session;
+      return s?.userId&&s.access&&s.refresh&&Number.isFinite(s.expiresAt)?s:null;
+    }catch{return null;}
+  }
+  function saveSession(s) {
+    const value=JSON.stringify(s?{url:config.url,session:s}:null);
+    try{
+      localStorage.setItem(sessionKey,value);
+      try{sessionStorage.removeItem(sessionKey);}catch{/* The browser copy takes priority. */}
+    }catch{
+      try{sessionStorage.setItem(sessionKey,value);}catch{/* The open tab can still use its session. */}
+    }
+  }
+  function withSessionLock(run) {
+    return navigator.locks?.request(sessionKey,run)??run();
+  }
+  function useSession(active,run) {
+    return withSessionLock(()=>{
+      const stored=loadSession();
+      if(session!==active||(sessionStored&&stored?.loginId!==active.loginId))throw new Error("登入狀態已變更，請再試一次。");
+      if(stored)Object.assign(active,stored);
+      return run(active,renewed=>{
+        if(session===active&&loadSession()?.loginId===renewed.loginId)saveSession(renewed);
+      });
+    });
   }
   function setCloudView(s,remote) {
-    session=s;revision=remote.revision;data=remote.payload;selected=null;
+    session=s;sessionStored=loadSession()?.loginId===s.loginId;
+    revision=remote.revision;data=remote.payload;selected=null;
     $("search").value="";$("filter").value="all";
     $("local-label").textContent="雲端紀錄";
     $("cloud-open").textContent="已登入";
     $("storage-note").textContent="目前顯示雲端紀錄。";
-    saveSession(s);render();
+    render();
   }
   async function commit(next) {
     if(saveBusy)throw new Error("正在儲存或同步，請稍候。");
@@ -74,8 +101,12 @@
     const checked=C.validate(next);
     saveBusy=true;
     try{
-      if(session)revision=await cloud.write(session,revision,checked,saveSession);
-      else if(!demo){
+      if(session){
+        const active=session;
+        const savedRevision=await useSession(active,(s,onRefresh)=>cloud.write(s,revision,checked,onRefresh));
+        if(session!==active)throw new Error("登入狀態已變更，請讀取最新紀錄。");
+        revision=savedRevision;
+      }else if(!demo){
         try{localStorage.setItem(key,JSON.stringify(checked));}
         catch{throw new Error("無法儲存，請檢查瀏覽器儲存權限或可用空間。");}
       }
@@ -252,13 +283,20 @@
     }catch(err){notify(err instanceof SyntaxError?"不是有效的 JSON 備份，原紀錄未變。":err.message);}
   });
   window.addEventListener("storage",e=>{
+    if(cloud&&session&&(e.key===sessionKey||e.key===null)&&loadSession()?.loginId!==session.loginId){
+      showLocalView();return;
+    }
     if(demo||session||blocked||!(e.key===key||e.key===null))return;
     if(document.querySelector("dialog[open]")){lock("另一個分頁已更動紀錄，請重新整理後再編輯。");return;}
     try {data=read();render();}
     catch {lock("另一個分頁的資料無法讀取，原紀錄已保留。");}
   });
-  $("cloud-open").addEventListener("click",()=>{
+  $("cloud-open").addEventListener("click",async()=>{
     if(saveBusy){notify("正在同步，請稍候。");return;}
+    if(!session&&loadSession()){
+      await restoreCloud();
+      if(session)return;
+    }
     $("cloud-form").hidden=!!session;$("cloud-actions").hidden=!session;
     $("cloud-dialog").showModal();
   });
@@ -268,45 +306,80 @@
     const form=e.currentTarget,f=new FormData(form),button=form.querySelector('button[type=submit]');
     form.elements.password.value="";saveBusy=true;button.disabled=true;
     try{
-      const s=await cloud.login(String(f.get("email")),String(f.get("password")));
-      const remote=await cloud.read(s);
-      if(!$("cloud-dialog").open)return;
-      setCloudView(s,remote);$("cloud-dialog").close();notify("已登入，正在使用雲端紀錄");
+      await withSessionLock(async()=>{
+        const s=await cloud.login(String(f.get("email")),String(f.get("password")));
+        const remote=await cloud.read(s);
+        if(!$("cloud-dialog").open)return;
+        s.loginId=id();saveSession(s);setCloudView(s,remote);
+        $("cloud-dialog").close();notify("已登入，正在使用雲端紀錄");
+      });
     }catch(err){notify(err.message);}
     finally{button.disabled=false;saveBusy=false;}
   });
   async function refreshCloud(report=false){
     if(!session||saveBusy)return;
+    const active=session;
     saveBusy=true;
     try{
-      const remote=await cloud.read(session,saveSession);
+      const remote=await useSession(active,(s,onRefresh)=>cloud.read(s,onRefresh));
+      if(session!==active)return;
       data=remote.payload;revision=remote.revision;render();
       if(report){$("cloud-dialog").close();notify("已讀取最新紀錄");}
-    }catch(err){if(report||err.code==="auth")notify(err.message);}
+    }catch(err){
+      if(err.code==="session-expired"&&session===active){
+        if(loadSession()?.loginId===active.loginId)saveSession(null);
+        showLocalView();
+      }
+      if(report||["auth","session-expired"].includes(err.code))notify(err.message);
+    }
     finally{saveBusy=false;}
   }
   $("cloud-refresh").addEventListener("click",()=>refreshCloud(true));
-  $("cloud-logout").addEventListener("click",()=>{
-    if(saveBusy){notify("正在同步，請稍候。");return;}
-    $("cloud-dialog").close();session=null;revision=0;saveSession(null);
+  function showLocalView() {
+    for(const dialog of document.querySelectorAll("dialog[open]"))dialog.close();
+    session=null;sessionStored=false;revision=0;
     selected=null;data=C.empty();$("search").value="";$("filter").value="all";$("show-archived").checked=false;
     $("local-label").textContent="此瀏覽器儲存";$("cloud-open").textContent="同步";
     $("storage-note").textContent="紀錄只在此瀏覽器。換裝置前請先匯出備份。";
     try{data=read();}catch{lock("無法讀取本機紀錄，原資料已保留。");}
-    render();notify("已回到本機紀錄");
+    render();
+  }
+  $("cloud-logout").addEventListener("click",async()=>{
+    if(saveBusy){notify("正在同步，請稍候。");return;}
+    const active=session;
+    saveBusy=true;
+    try{
+      await withSessionLock(()=>{
+        if(session!==active)return;
+        const stored=loadSession();
+        if(!stored||stored.loginId===active.loginId)saveSession(null);
+        showLocalView();notify("已回到本機紀錄");
+      });
+    }finally{saveBusy=false;}
   });
   document.addEventListener("visibilitychange",()=>{
-    if(!document.hidden&&!document.querySelector("dialog[open]"))refreshCloud();
+    if(!document.hidden&&!document.querySelector("dialog[open]")){
+      if(session)refreshCloud();
+      else if(!saveBusy&&cloud&&loadSession())restoreCloud();
+    }
   });
   async function restoreCloud() {
     if(!cloud)return;
     saveBusy=true;
     try{
-      const stored=JSON.parse(sessionStorage.getItem(sessionKey)||"null");
-      if(stored?.url!==config.url||!stored.session)return;
-      const remote=await cloud.read(stored.session);
-      setCloudView(stored.session,remote);
-    }catch{saveSession(null);notify("未能恢復雲端登入，目前顯示本機紀錄。");}
+      await withSessionLock(async()=>{
+        const stored=loadSession();
+        if(!stored)return;
+        if(!stored.loginId){stored.loginId=id();saveSession(stored);}
+        try{
+          const remote=await cloud.read(stored,saveSession);
+          if(loadSession()?.loginId===stored.loginId)setCloudView(stored,remote);
+        }catch(err){
+          if(err.code==="session-expired"&&loadSession()?.loginId===stored.loginId)saveSession(null);
+          notify(err.code==="session-expired"?err.message:"暫時無法連線到雲端。連線恢復後，按「同步」可再試一次。");
+        }
+      });
+    }
     finally{saveBusy=false;}
   }
   render();

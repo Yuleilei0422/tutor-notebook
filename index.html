@@ -13,8 +13,8 @@
   <link rel="stylesheet" href="./style.css?v=lesson-form-2">
   <script src="./core.js" defer></script>
   <script src="./cloud-config.js" defer></script>
-  <script src="./cloud.js" defer></script>
-  <script src="./app.js?v=lesson-form-2" defer></script>
+  <script src="./cloud.js?v=login-2" defer></script>
+  <script src="./app.js?v=login-2" defer></script>
 </head>
 <body>
 <div id="app">
@@ -96,7 +96,7 @@
 <dialog id="cloud-dialog" aria-labelledby="cloud-title">
   <div class="modal-head"><h2 id="cloud-title">手機與電腦同步</h2><button type="button" class="icon-button" data-close aria-label="關閉">×</button></div>
   <form id="cloud-form">
-    <p class="subtle">使用同一個老師帳號登入。本機資料不會自動上傳。</p>
+    <p class="subtle">登入後會在這個瀏覽器保持登入。共用裝置用完請登出。</p>
     <label>老師帳號<input name="email" type="email" required autocomplete="username"></label>
     <label>密碼<input name="password" type="password" required autocomplete="current-password"></label>
     <div class="modal-actions"><button class="button primary" type="submit">登入雲端</button></div>
